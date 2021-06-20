@@ -7,6 +7,8 @@ const KEVA_OP_NAMESPACE = 0xd0;
 const KEVA_OP_PUT = 0xd1;
 const KEVA_OP_DELETE = 0xd2;
 
+const _KEVA_NS_BUF = Buffer.from('\x01_KEVA_NS_', 'utf8');
+
 function decodeBase64(key) {
   if (!key) {
     return '';
@@ -71,6 +73,24 @@ function getNamespaceKeyScriptHash(namespaceId, key) {
   return reversedHash.toString('hex');
 }
 
+export function getRootNamespaceScriptHash(namespaceId) {
+  const emptyBuffer = Buffer.alloc(0);
+  const nsBuf = namespaceId.startsWith('N') ? namespaceToHex(namespaceId) : Buffer.from(namespaceId, "hex");
+  const totalBuf = Buffer.concat([nsBuf, _KEVA_NS_BUF]);
+  let bscript = bitcoin.script;
+  let nsScript = bscript.compile([
+    KEVA_OP_PUT,
+    totalBuf,
+    emptyBuffer,
+    bscript.OPS.OP_2DROP,
+    bscript.OPS.OP_DROP,
+    bscript.OPS.OP_RETURN]);
+  let hash = bitcoin.crypto.sha256(nsScript);
+  let reversedHash = Buffer.from(reverse(hash));
+  return reversedHash.toString('hex');
+}
+
+
 class KevaWS {
 
   constructor(url) {
@@ -91,6 +111,78 @@ class KevaWS {
 
   close() {
     this.ws && this.ws.close();
+  }
+
+  async getMerkle(txId, height) {
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(`{"id": 1, "method": "blockchain.transaction.get_merkle", "params": ["${txId}", ${height}]}`);
+    } catch (err) {
+      return err;
+    }
+
+    return await promise;
+  }
+
+  async getNamespaceInfo(namespaceId) {
+    const history = await this.getNamespaceHistory(namespaceId);
+    if (!history || history.length == 0) {
+      return {}
+    }
+    // Get short code of the namespace.
+    const merkle = await this.getMerkle(history[0].tx_hash, history[0].h);
+    if (!merkle) {
+      return {}
+    }
+
+    let strHeight = merkle.block_height.toString();
+    const prefix = strHeight.length;
+    const shortCode = prefix + strHeight + merkle.pos.toString();
+
+    const last = history.length - 1;
+    const latest = history[last];
+    if (latest.kv.op == KEVA_OP_NAMESPACE) {
+      // Original creation.
+      return {
+        displayName: decodeBase64(latest.kv.key),
+        shortCode,
+      }
+    } else {
+      const infoStr = decodeBase64(latest.kv.value);
+      const info = JSON.parse(infoStr);
+      return {...info, shortCode}
+    }
+
+  }
+
+  async getNamespaceHistory(namespaceId) {
+    const scriptHash = getRootNamespaceScriptHash(namespaceId);
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (!data.result || data.result.length == 0) {
+          return reject("Namespace not found");
+        }
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(`{"id": 1, "method": "blockchain.scripthash.get_history", "params": ["${scriptHash}"]}`);
+    } catch (err) {
+      return err;
+    }
+    const nsHistory =  await promise;
+    const txIds = nsHistory.map(t => t.tx_hash);
+    const transactions = await this.getTransactions(txIds);
+    return transactions.map((t, i) => {
+      t.tx_hash = txIds[i];
+      return t;
+    })
   }
 
   async getKeyValues(namespaceId, txNum=-1) {
@@ -162,7 +254,7 @@ class KevaWS {
       // The last one is the latest one.
       const index = results.length - 1;
       if (index < 0) {
-        return;
+        return {};
       }
       const result = results[index];
       if (result.kv.op == KEVA_OP_DELETE || result.kv.op == KEVA_OP_NAMESPACE) {

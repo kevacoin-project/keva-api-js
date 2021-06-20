@@ -1,7 +1,6 @@
 import KevaWS from "./index";
 
-//const URL = "wss://ec0.kevacoin.org:8443";
-const URL = "ws://127.0.0.1:8088";
+const URL = "wss://ec0.kevacoin.org:8443";
 
 test('getKeyValues', async () => {
   const kevaWS = new KevaWS(URL);
@@ -37,5 +36,31 @@ test('getTransactions', async () => {
   await kevaWS.connect();
   const result= await kevaWS.getTransactions(["b3047635770ef381966bc653e1833ef2c2872a84d758b9590d25e7d2529f4f98"], true);
   expect(result.length).toBeGreaterThan(0);
+  kevaWS.close();
+});
+
+
+test('getMerkle', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result= await kevaWS.getMerkle("e98c0762842edcab97e2e2e8f2844fdc35c8a78d7dc20a519e7fe7292e402683", 210);
+  kevaWS.close();
+});
+
+
+test('getNamespaceHistory', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result= await kevaWS.getNamespaceHistory("Nfw2WYkGoSKve74cCfEum67x8bFgpHygxg");
+  expect(result.length).toBeGreaterThan(0);
+  kevaWS.close();
+});
+
+
+test('getNamespaceInfo', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result= await kevaWS.getNamespaceInfo("Nfw2WYkGoSKve74cCfEum67x8bFgpHygxg");
+  console.log(result)
   kevaWS.close();
 });
