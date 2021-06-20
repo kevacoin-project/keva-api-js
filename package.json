@@ -3,13 +3,23 @@
   "version": "0.1.0",
   "description": "Javascript API to access Keva ElectrumX server through Websocket",
   "main": "index.js",
+  "dependencies": {
+    "bitcoinjs-lib": "git+https://github.com/kevacoin-project/bitcoinjs-lib.git",
+    "buffer": "^6.0.3",
+    "isomorphic-ws": "^4.0.1",
+    "ws": "^7.5.0"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "keywords": [
     "Kevacoin",
     "ElectrumX"
   ],
   "author": "Kevacoin Core Developers",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.14.5",
+    "jest": "^27.0.4"
+  }
 }
