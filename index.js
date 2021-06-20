@@ -53,6 +53,24 @@ function getNamespaceScriptHash(namespaceId, isBase58 = true) {
   return reversedHash.toString('hex');
 }
 
+function getNamespaceKeyScriptHash(namespaceId, key) {
+  const nsBuffer = namespaceToHex(namespaceId);
+  const keyBuffer = Buffer.from(key, 'utf8');
+  const totalBuffer = Buffer.concat([nsBuffer, keyBuffer]);
+  const emptyBuffer = Buffer.alloc(0);
+  let bscript = bitcoin.script;
+  let nsScript = bscript.compile([
+    KEVA_OP_PUT,
+    totalBuffer,
+    emptyBuffer,
+    bscript.OPS.OP_2DROP,
+    bscript.OPS.OP_DROP,
+    bscript.OPS.OP_RETURN]);
+  let hash = bitcoin.crypto.sha256(nsScript);
+  let reversedHash = Buffer.from(reverse(hash));
+  return reversedHash.toString('hex');
+}
+
 class KevaWS {
 
   constructor(url) {
@@ -99,6 +117,64 @@ class KevaWS {
       return err;
     }
     return await promise;
+  }
+
+  async getTransactions(txIds, namespaceInfo = true) {
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(`{"id": 1, "method": "blockchain.keva.get_transactions_info", "params": [${JSON.stringify(txIds)}, ${namespaceInfo}]}`);
+    } catch (err) {
+      return err;
+    }
+    return await promise;
+  }
+
+  async getValue(namespaceId, key, history = false) {
+    const scriptHash = getNamespaceKeyScriptHash(namespaceId, key);
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(`{"id": 1, "method": "blockchain.scripthash.get_history", "params": ["${scriptHash}"]}`);
+    } catch (err) {
+      return err;
+    }
+    const txIdResults = await promise;
+    const txIds = txIdResults.map(t => t.tx_hash);
+    const results = await this.getTransactions(txIds);
+    if (history) {
+      return results.map(r => {
+        return {
+          value: decodeBase64(r.kv.value),
+          timestamp: r.t,
+          height: r.h,
+        };
+      });
+    } else {
+      // The last one is the latest one.
+      const index = results.length - 1;
+      if (index < 0) {
+        return;
+      }
+      const result = results[index];
+      if (result.kv.op == KEVA_OP_DELETE || result.kv.op == KEVA_OP_NAMESPACE) {
+        // Value deleted or no value (namespace registation).
+        return;
+      }
+      return {
+        value: decodeBase64(result.kv.value),
+        timestamp: result.t,
+        height: result.h,
+      };
+    }
   }
 
 }
