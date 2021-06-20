@@ -1,0 +1,15 @@
+{
+  "name": "keva-api-js",
+  "version": "0.1.0",
+  "description": "Javascript API to access Keva ElectrumX server through Websocket",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Kevacoin",
+    "ElectrumX"
+  ],
+  "author": "Kevacoin Core Developers",
+  "license": "MIT"
+}
