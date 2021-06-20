@@ -129,6 +129,22 @@ class KevaWS {
     return await promise;
   }
 
+  async getIdFromPos(height, pos) {
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(`{"id": 1, "method": "blockchain.transaction.id_from_pos", "params": ["${height}", ${pos}]}`);
+    } catch (err) {
+      return err;
+    }
+
+    return await promise;
+  }
+
   async getNamespaceInfo(namespaceId) {
     const history = await this.getNamespaceHistory(namespaceId);
     if (!history || history.length == 0) {
@@ -158,6 +174,18 @@ class KevaWS {
       return {...info, shortCode}
     }
 
+  }
+
+  async getNamespaceIdFromShortCode(shortCode) {
+    const prefix = parseInt(shortCode.substring(0, 1));
+    const height = shortCode.substring(1, 1 + prefix);
+    const pos = shortCode.substring(1 + prefix);
+    const tx = await this.getIdFromPos(height, pos);
+    const transactions = await this.getTransactions([tx]);
+    if (!transactions || transactions.length == 0 || !transactions[0].n) {
+      return null;
+    }
+    return transactions[0].n[0];
   }
 
   async getNamespaceHistory(namespaceId) {

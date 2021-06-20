@@ -1,6 +1,7 @@
 import KevaWS from "./index";
 
 const URL = "wss://ec0.kevacoin.org:8443";
+//const URL = "ws://127.0.0.1:8088";
 
 test('getKeyValues', async () => {
   const kevaWS = new KevaWS(URL);
@@ -48,6 +49,15 @@ test('getMerkle', async () => {
 });
 
 
+test('getIdFromPos', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result= await kevaWS.getIdFromPos(210, 1);
+  expect(result).toBe("e98c0762842edcab97e2e2e8f2844fdc35c8a78d7dc20a519e7fe7292e402683");
+  kevaWS.close();
+});
+
+
 test('getNamespaceHistory', async () => {
   const kevaWS = new KevaWS(URL);
   await kevaWS.connect();
@@ -61,6 +71,15 @@ test('getNamespaceInfo', async () => {
   const kevaWS = new KevaWS(URL);
   await kevaWS.connect();
   const result= await kevaWS.getNamespaceInfo("Nfw2WYkGoSKve74cCfEum67x8bFgpHygxg");
-  console.log(result)
+  expect(result.shortCode).toBe("32101");
+  kevaWS.close();
+});
+
+
+test('getNamespaceIdFromShortCode', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result= await kevaWS.getNamespaceIdFromShortCode("32101");
+  expect(result).toBe("Nfw2WYkGoSKve74cCfEum67x8bFgpHygxg");
   kevaWS.close();
 });
