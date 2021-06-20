@@ -80,14 +80,17 @@ class KevaWS {
     const promise = new Promise((resolve, reject) => {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data)
-        console.log(data.result);
         const resultList = data.result.keyvalues.map(r => {
           r.key = decodeBase64(r.key);
           r.value = decodeBase64(r.value);
           return r;
         });
-        console.log(resultList)
-        resolve(resultList);
+        const min_tx_num = data.result.min_tx_num;
+        const result = {
+          data: resultList,
+          min_tx_num,
+        };
+        resolve(result);
       };
     });
     try {
