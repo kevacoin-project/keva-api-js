@@ -1,7 +1,12 @@
 // TODO: Convert all of these to "import .. from" instead of requires
 import WebSocket from "isomorphic-ws";
 import { Buffer } from "buffer";
-import bitcoin, { StackElement } from "bitcoinjs-lib";
+// This one doesn't play very nicely with default exports. May need "* as bitcoin" if you want the bitcoin.crypto code style
+import {
+  StackElement,
+  script as bscript,
+  crypto as bcrypto,
+} from "bitcoinjs-lib";
 import base58check from "bs58check";
 
 const KEVA_OP_NAMESPACE = 0xd0;
@@ -10,8 +15,8 @@ const KEVA_OP_DELETE = 0xd2;
 
 const _KEVA_NS_BUF = Buffer.from("\x01_KEVA_NS_", "utf8");
 
-// Type imports
-import type { KVATransaction } from "./types";
+// Custom imports
+import type { KVATransaction, KVAWebSocket } from "./types";
 
 function decodeBase64(key: string) {
   if (!key) {
@@ -46,7 +51,6 @@ function reverse(src) {
 
 function getNamespaceScriptHash(namespaceId, isBase58 = true) {
   const emptyBuffer = Buffer.alloc(0);
-  let bscript = bitcoin.script;
   let nsScript = bscript.compile([
     KEVA_OP_PUT,
     // TODO: Find out the proper typing for this
@@ -58,7 +62,7 @@ function getNamespaceScriptHash(namespaceId, isBase58 = true) {
     bscript.OPS.OP_DROP,
     bscript.OPS.OP_RETURN,
   ]);
-  let hash = bitcoin.crypto.sha256(nsScript);
+  let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
   return reversedHash.toString("hex");
 }
@@ -68,7 +72,6 @@ function getNamespaceKeyScriptHash(namespaceId, key) {
   const keyBuffer = Buffer.from(key, "utf8");
   const totalBuffer = Buffer.concat([nsBuffer as Uint8Array, keyBuffer]);
   const emptyBuffer = Buffer.alloc(0);
-  let bscript = bitcoin.script;
   let nsScript = bscript.compile([
     KEVA_OP_PUT,
     totalBuffer,
@@ -77,7 +80,7 @@ function getNamespaceKeyScriptHash(namespaceId, key) {
     bscript.OPS.OP_DROP,
     bscript.OPS.OP_RETURN,
   ]);
-  let hash = bitcoin.crypto.sha256(nsScript);
+  let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
   return reversedHash.toString("hex");
 }
@@ -88,7 +91,6 @@ function getRootNamespaceScriptHash(namespaceId) {
     ? namespaceToHex(namespaceId)
     : Buffer.from(namespaceId, "hex");
   const totalBuf = Buffer.concat([nsBuf as Uint8Array, _KEVA_NS_BUF]);
-  let bscript = bitcoin.script;
   let nsScript = bscript.compile([
     KEVA_OP_PUT,
     totalBuf,
@@ -97,26 +99,16 @@ function getRootNamespaceScriptHash(namespaceId) {
     bscript.OPS.OP_DROP,
     bscript.OPS.OP_RETURN,
   ]);
-  let hash = bitcoin.crypto.sha256(nsScript);
+  let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
   return reversedHash.toString("hex");
 }
 
-// TODO: Find out if Data here is ALWAYS a string
-// @ts-ignore
-interface KVAWebSocketEvent<T> extends WebSocket.MessageEvent {
-  data: T;
-}
-
-export type KVAWebSocket<DataType = string> = WebSocket & {
-  onmessage: (event: KVAWebSocketEvent<DataType>) => void;
-};
-
 class KevaWS {
-  private ws: KVAWebSocket<string>;
+  private ws: KVAWebSocket;
 
   constructor(url: string) {
-    this.ws = new WebSocket(url) as KVAWebSocket;
+    this.ws = new WebSocket(url);
   }
 
   async connect() {
@@ -140,7 +132,7 @@ class KevaWS {
   async getMerkle(txId: string, height: number) {
     const promise = new Promise((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         resolve(data.result);
       };
     });
@@ -158,7 +150,7 @@ class KevaWS {
   async getIdFromPos(height: number, pos: unknown) {
     const promise = new Promise((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         resolve(data.result);
       };
     });
@@ -219,7 +211,7 @@ class KevaWS {
     const scriptHash = getRootNamespaceScriptHash(namespaceId);
     const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         if (!data.result || data.result.length == 0) {
           return reject("Namespace not found");
         }
@@ -246,7 +238,7 @@ class KevaWS {
     const scriptHash = getNamespaceScriptHash(namespaceId, true);
     const promise = new Promise((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         const resultList = data.result.keyvalues.map((r) => {
           r.key = decodeBase64(r.key);
           r.value = decodeBase64(r.value);
@@ -276,7 +268,7 @@ class KevaWS {
   ): Promise<Array<KVATransaction>> {
     const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         resolve(data.result);
       };
     });
@@ -296,7 +288,7 @@ class KevaWS {
     const scriptHash = getNamespaceKeyScriptHash(namespaceId, key);
     const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data.toString());
         resolve(data.result);
       };
     });

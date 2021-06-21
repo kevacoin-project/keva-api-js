@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "description": "Javascript API to access Keva ElectrumX server through Websocket",
   "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
   "scripts": {
     "test": "jest",
-    "dev": "jest --watch"
+    "dev": "jest --watch",
+    "build": "tsc -p tsconfig.prod.json"
   },
   "keywords": [
     "Kevacoin",

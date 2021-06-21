@@ -1,3 +1,5 @@
+import WebSocket from "ws";
+
 export type UnixDate = number;
 
 // TODO: Make this more complete
@@ -11,4 +13,14 @@ export interface KVATransaction {
     op: number;
     value: string;
   };
+}
+
+// TODO: Find out if Data here is ALWAYS a string
+// @ts-ignore
+export interface KVAWebSocketEvent<T> extends WebSocket.MessageEvent {
+  data: T;
+}
+
+export interface KVAWebSocket extends WebSocket {
+  onmessage: (event: KVAWebSocketEvent<WebSocket.Data>) => void;
 }
