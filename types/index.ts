@@ -1,4 +1,4 @@
-import WS from "ws";
+import WS from 'ws';
 
 export type UnixDate = number;
 
@@ -6,8 +6,7 @@ export namespace Keva {
   // TODO: Make this more complete
   export interface Transaction {
     tx_hash: string;
-    // FIXME: This is probably the wrong type for `n`
-    n: string;
+    n: [string, number];
     t: UnixDate;
     h: number;
     kv: {
@@ -18,7 +17,7 @@ export namespace Keva {
 
   // TODO: Find out if Data here is ALWAYS a string
   // @ts-ignore
-  export interface WebSocketEvent<T> extends WebSocket.MessageEvent {
+  export interface WebSocketEvent<T> extends WS.MessageEvent {
     data: T;
   }
 
