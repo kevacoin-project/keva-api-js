@@ -73,7 +73,7 @@ function getNamespaceKeyScriptHash(namespaceId, key) {
   return reversedHash.toString('hex');
 }
 
-export function getRootNamespaceScriptHash(namespaceId) {
+function getRootNamespaceScriptHash(namespaceId) {
   const emptyBuffer = Buffer.alloc(0);
   const nsBuf = namespaceId.startsWith('N') ? namespaceToHex(namespaceId) : Buffer.from(namespaceId, "hex");
   const totalBuf = Buffer.concat([nsBuf, _KEVA_NS_BUF]);
