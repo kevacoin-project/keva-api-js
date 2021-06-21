@@ -1,6 +1,6 @@
 {
   "name": "keva-api-js",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Javascript API to access Keva ElectrumX server through Websocket",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
