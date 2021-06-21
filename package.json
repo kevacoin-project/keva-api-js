@@ -3,7 +3,7 @@
   "version": "0.4.1",
   "description": "Javascript API to access Keva ElectrumX server through Websocket",
   "main": "dist/index.js",
-  "types": "dist/types/index.d.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "dev": "jest --watch",
