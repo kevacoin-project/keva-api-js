@@ -1,39 +1,39 @@
 // TODO: Convert all of these to "import .. from" instead of requires
-import WebSocket from "isomorphic-ws";
-import { Buffer } from "buffer";
+import WebSocket from 'isomorphic-ws';
+import { Buffer } from 'buffer';
 // This one doesn't play very nicely with default exports. May need "* as bitcoin" if you want the bitcoin.crypto code style
 import {
   StackElement,
   script as bscript,
   crypto as bcrypto,
-} from "bitcoinjs-lib";
-import base58check from "bs58check";
+} from 'bitcoinjs-lib';
+import base58check from 'bs58check';
 
 const KEVA_OP_NAMESPACE = 0xd0;
 const KEVA_OP_PUT = 0xd1;
 const KEVA_OP_DELETE = 0xd2;
 
-const _KEVA_NS_BUF = Buffer.from("\x01_KEVA_NS_", "utf8");
+const _KEVA_NS_BUF = Buffer.from('\x01_KEVA_NS_', 'utf8');
 
 // Custom imports
-import type { Keva } from "./types";
+import type { Keva } from './types';
 
 function decodeBase64(key: string) {
   if (!key) {
-    return "";
+    return '';
   }
 
-  const keyBuf = Buffer.from(key, "base64");
+  const keyBuf = Buffer.from(key, 'base64');
   if (keyBuf[0] < 10) {
     // Special protocol, not a valid utf-8 string.
     return keyBuf;
   }
-  return keyBuf.toString("utf-8");
+  return keyBuf.toString('utf-8');
 }
 
 function namespaceToHex(nsStr) {
   if (!nsStr) {
-    return "";
+    return '';
   }
   return base58check.decode(nsStr);
 }
@@ -56,7 +56,7 @@ function getNamespaceScriptHash(namespaceId, isBase58 = true) {
     // TODO: Find out the proper typing for this
     (isBase58
       ? namespaceToHex(namespaceId)
-      : Buffer.from(namespaceId, "hex")) as StackElement,
+      : Buffer.from(namespaceId, 'hex')) as StackElement,
     emptyBuffer,
     bscript.OPS.OP_2DROP,
     bscript.OPS.OP_DROP,
@@ -64,12 +64,12 @@ function getNamespaceScriptHash(namespaceId, isBase58 = true) {
   ]);
   let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
-  return reversedHash.toString("hex");
+  return reversedHash.toString('hex');
 }
 
 function getNamespaceKeyScriptHash(namespaceId, key) {
   const nsBuffer = namespaceToHex(namespaceId);
-  const keyBuffer = Buffer.from(key, "utf8");
+  const keyBuffer = Buffer.from(key, 'utf8');
   const totalBuffer = Buffer.concat([nsBuffer as Uint8Array, keyBuffer]);
   const emptyBuffer = Buffer.alloc(0);
   let nsScript = bscript.compile([
@@ -82,14 +82,14 @@ function getNamespaceKeyScriptHash(namespaceId, key) {
   ]);
   let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
-  return reversedHash.toString("hex");
+  return reversedHash.toString('hex');
 }
 
 function getRootNamespaceScriptHash(namespaceId) {
   const emptyBuffer = Buffer.alloc(0);
-  const nsBuf = namespaceId.startsWith("N")
+  const nsBuf = namespaceId.startsWith('N')
     ? namespaceToHex(namespaceId)
-    : Buffer.from(namespaceId, "hex");
+    : Buffer.from(namespaceId, 'hex');
   const totalBuf = Buffer.concat([nsBuf as Uint8Array, _KEVA_NS_BUF]);
   let nsScript = bscript.compile([
     KEVA_OP_PUT,
@@ -101,7 +101,7 @@ function getRootNamespaceScriptHash(namespaceId) {
   ]);
   let hash = bcrypto.sha256(nsScript);
   let reversedHash = Buffer.from(reverse(hash));
-  return reversedHash.toString("hex");
+  return reversedHash.toString('hex');
 }
 
 class KevaWS {
@@ -115,7 +115,7 @@ class KevaWS {
   async connect() {
     const promise = new Promise<void>((resolve, reject) => {
       if (!this.ws) {
-        reject("No websocket");
+        reject('No websocket');
       }
 
       // Since we do not use this event, we can mark unknown
@@ -214,7 +214,7 @@ class KevaWS {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data.toString());
         if (!data.result || data.result.length == 0) {
-          return reject("Namespace not found");
+          return reject('Namespace not found');
         }
         resolve(data.result);
       };
