@@ -1,26 +1,28 @@
-import WebSocket from "ws";
+import WS from "ws";
 
 export type UnixDate = number;
 
-// TODO: Make this more complete
-export interface KVATransaction {
-  tx_hash: string;
-  // FIXME: This is probably the wrong type for `n`
-  n: string;
-  t: UnixDate;
-  h: number;
-  kv: {
-    op: number;
-    value: string;
-  };
-}
+export namespace Keva {
+  // TODO: Make this more complete
+  export interface Transaction {
+    tx_hash: string;
+    // FIXME: This is probably the wrong type for `n`
+    n: string;
+    t: UnixDate;
+    h: number;
+    kv: {
+      op: number;
+      value: string;
+    };
+  }
 
-// TODO: Find out if Data here is ALWAYS a string
-// @ts-ignore
-export interface KVAWebSocketEvent<T> extends WebSocket.MessageEvent {
-  data: T;
-}
+  // TODO: Find out if Data here is ALWAYS a string
+  // @ts-ignore
+  export interface WebSocketEvent<T> extends WebSocket.MessageEvent {
+    data: T;
+  }
 
-export interface KVAWebSocket extends WebSocket {
-  onmessage: (event: KVAWebSocketEvent<WebSocket.Data>) => void;
+  export interface WebSocket extends WS {
+    onmessage: (event: WebSocketEvent<WS.Data>) => void;
+  }
 }

@@ -16,7 +16,7 @@ const KEVA_OP_DELETE = 0xd2;
 const _KEVA_NS_BUF = Buffer.from("\x01_KEVA_NS_", "utf8");
 
 // Custom imports
-import type { KVATransaction, KVAWebSocket } from "./types";
+import type { Keva } from "./types";
 
 function decodeBase64(key: string) {
   if (!key) {
@@ -105,10 +105,11 @@ function getRootNamespaceScriptHash(namespaceId) {
 }
 
 class KevaWS {
-  private ws: KVAWebSocket;
+  private ws: Keva.WebSocket;
 
   constructor(url: string) {
-    this.ws = new WebSocket(url);
+    // FIXME: Try to find a way to do this without type coercion. It WORKS, but it _shouldn't_ need it
+    this.ws = new WebSocket(url) as Keva.WebSocket;
   }
 
   async connect() {
@@ -209,7 +210,7 @@ class KevaWS {
 
   async getNamespaceHistory(namespaceId) {
     const scriptHash = getRootNamespaceScriptHash(namespaceId);
-    const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
+    const promise = new Promise<Array<Keva.Transaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data.toString());
         if (!data.result || data.result.length == 0) {
@@ -265,8 +266,8 @@ class KevaWS {
   async getTransactions(
     txIds: Array<string>,
     namespaceInfo = true
-  ): Promise<Array<KVATransaction>> {
-    const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
+  ): Promise<Array<Keva.Transaction>> {
+    const promise = new Promise<Array<Keva.Transaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data.toString());
         resolve(data.result);
@@ -286,7 +287,7 @@ class KevaWS {
 
   async getValue(namespaceId: string, key: string, history = false) {
     const scriptHash = getNamespaceKeyScriptHash(namespaceId, key);
-    const promise = new Promise<Array<KVATransaction>>((resolve, reject) => {
+    const promise = new Promise<Array<Keva.Transaction>>((resolve, reject) => {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data.toString());
         resolve(data.result);
