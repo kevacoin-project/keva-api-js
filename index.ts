@@ -6,6 +6,7 @@ import {
   StackElement,
   script as bscript,
   crypto as bcrypto,
+  address as baddress,
 } from 'bitcoinjs-lib';
 import base58check from 'bs58check';
 
@@ -104,6 +105,31 @@ function getRootNamespaceScriptHash(namespaceId) {
   return reversedHash.toString('hex');
 }
 
+function getAddressScriptHash(address) {
+  let script = baddress.toOutputScript(address);
+  let hash = bcrypto.sha256(script);
+  let reversedHash = Buffer.from(reverse(hash));
+  return reversedHash.toString('hex');
+}
+
+export function getHashtagScriptHash(hashtag) {
+  let emptyBuffer = Buffer.alloc(0);
+  if (hashtag.startsWith('#')) {
+    hashtag = hashtag.substring(1);
+  }
+  let nsScript = bscript.compile([
+    KEVA_OP_PUT,
+    Buffer.from(hashtag.toLowerCase(), 'utf8'),
+    emptyBuffer,
+    bscript.OPS.OP_2DROP,
+    bscript.OPS.OP_DROP,
+    bscript.OPS.OP_RETURN,
+  ]);
+  let hash = bcrypto.sha256(nsScript);
+  let reversedHash = Buffer.from(reverse(hash));
+  return reversedHash.toString('hex');
+}
+
 class KevaWS {
   private ws: Keva.WebSocket;
 
@@ -144,7 +170,6 @@ class KevaWS {
     } catch (err) {
       return err;
     }
-
     return await promise;
   }
 
@@ -163,6 +188,48 @@ class KevaWS {
       return err;
     }
 
+    return await promise;
+  }
+
+  async getAddressHistory(address: string) {
+    const scriptHash = getAddressScriptHash(address);
+    const promise = new Promise<Array<Keva.Transaction>>((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data.toString());
+        if (!data.result || data.result.length == 0) {
+          return reject('Address not found');
+        }
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(
+        `{"id": 1, "method": "blockchain.scripthash.get_history", "params": ["${scriptHash}"]}`
+      );
+    } catch (err) {
+      return err;
+    }
+    return await promise;
+  }
+
+  async getAddressBalance(address: string) {
+    const scriptHash = getAddressScriptHash(address);
+    const promise = new Promise<Array<Keva.Transaction>>((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data.toString());
+        if (!data.result || data.result.length == 0) {
+          return reject('Address not found');
+        }
+        resolve(data.result);
+      };
+    });
+    try {
+      this.ws.send(
+        `{"id": 1, "method": "blockchain.scripthash.get_balance", "params": ["${scriptHash}"]}`
+      );
+    } catch (err) {
+      return err;
+    }
     return await promise;
   }
 
@@ -256,6 +323,41 @@ class KevaWS {
     try {
       this.ws.send(
         `{"id": 1, "method": "blockchain.keva.get_keyvalues", "params": ["${scriptHash}", ${txNum}]}`
+      );
+    } catch (err) {
+      return err;
+    }
+    return await promise;
+  }
+
+  async getHashtag(hashtag, txNum = -1) {
+    const scriptHash = getHashtagScriptHash(hashtag);
+    const promise = new Promise((resolve, reject) => {
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data.toString());
+        let hashtags = data.result.hashtags;
+        let min_tx_num = data.result.min_tx_num;
+        if (!hashtags || hashtags.length == 0) {
+          return {
+            hashtags: [],
+            min_tx_num: -1,
+          };
+        }
+
+        hashtags = hashtags.map((r) => {
+          r.key = decodeBase64(r.key);
+          r.value = decodeBase64(r.value);
+          return r;
+        });
+        resolve({
+          hashtags,
+          min_tx_num,
+        });
+      };
+    });
+    try {
+      this.ws.send(
+        `{"id": 1, "method": "blockchain.keva.get_hashtag", "params": ["${scriptHash}", ${txNum}]}`
       );
     } catch (err) {
       return err;

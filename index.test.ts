@@ -1,3 +1,4 @@
+import exp from 'constants';
 import KevaWS from './index';
 
 // TODO: Consider bundling the development server via docker.
@@ -63,6 +64,28 @@ test('getMerkle', async () => {
     'e98c0762842edcab97e2e2e8f2844fdc35c8a78d7dc20a519e7fe7292e402683',
     210
   );
+  expect(result.block_height).toBe(210);
+  expect(result.pos).toBe(1);
+  kevaWS.close();
+});
+
+test('getAddressHistory', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result = await kevaWS.getAddressHistory(
+    'VE6Q8bpn8gRKRoWXFPXMPFZt6juXYyNbe1'
+  );
+  expect(result.length).toBeGreaterThan(20);
+  kevaWS.close();
+});
+
+test('getAddressBalance', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result = await kevaWS.getAddressBalance(
+    'VE6Q8bpn8gRKRoWXFPXMPFZt6juXYyNbe1'
+  );
+  expect(result.confirmed).toBeGreaterThan(10000000000);
   kevaWS.close();
 });
 
@@ -101,5 +124,14 @@ test('getNamespaceIdFromShortCode', async () => {
   await kevaWS.connect();
   const result = await kevaWS.getNamespaceIdFromShortCode('32101');
   expect(result).toBe('Nfw2WYkGoSKve74cCfEum67x8bFgpHygxg');
+  kevaWS.close();
+});
+
+test('getHashtag', async () => {
+  const kevaWS = new KevaWS(URL);
+  await kevaWS.connect();
+  const result = await kevaWS.getHashtag('Kevacoin');
+  expect(result.hashtags.length).toBeGreaterThan(10);
+  expect(result.min_tx_num).toBeGreaterThan(500000);
   kevaWS.close();
 });
